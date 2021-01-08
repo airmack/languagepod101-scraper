@@ -28,18 +28,47 @@ BASIC_AND_REVERSED_CARD_JP_MODEL = Model(
             'name': 'Audio',
             'font': 'Arial',
         },
-
+        {
+            'name': 'Image',
+            'font': 'Arial',
+        },
+        {
+            'name': 'Image',
+            'font': 'Arial',
+        },
+        {
+            'name': 'Example_Kanji',
+            'font': 'Arial',
+        },
+        {
+            'name': 'Example_Kana',
+            'font': 'Arial',
+        },
+        {
+            'name': 'Example_Audio',
+            'font': 'Arial',
+        },
+        {
+            'name': 'Example_English',
+            'font': 'Arial',
+        },
     ],
     templates=[
         {
             'name': 'Card 1',
-            'qfmt': '{{Kanji}}',
-            'afmt': '{{FrontSide}}\n\n<hr id=answer>\n\n{{Kana}}{{Audio}}<br>{{English}}',
+            'qfmt': '{{Image}}\n\n{{Kanji}}',
+            'afmt': """
+            {{FrontSide}}\n\n<hr id=answer>\n\n{{Kana}}{{Audio}}<br>{{English}}\n\n
+            {{Example_Kanji}}{{Example_Kana}{{Example_Audio} - {{Example_English}}\n\n
+            """
         },
         {
             'name': 'Card 2',
-            'qfmt': '{{English}}',
-            'afmt': '{{FrontSide}}\n\n<hr id=answer>\n\n{{Kanji}}<br>{{Kana}}{{Audio}}',
+            'qfmt': '{{Image}}\n\b{{English}}',
+            'afmt': """
+            {{FrontSide}}\n\n<hr id=answer>\n\n{{Kanji}}<br>{{Kana}}{{Audio}}\n\n
+            {{Example_Kanji}}{{Example_Kana}{{Example_Audio} - {{Example_English}}\n\n
+            """
         },
     ],
     css='.card {\n font-family: arial;\n font-size: 20px;\n text-align: center;\n color: black;\n background-color: white;\n}\n',
@@ -130,3 +159,6 @@ class Japanese(Language):
         local_file = "".join(title.split()) + ".apkg"
         my_package.write_to_file(local_file, timestamp=time.time())
         logging.info("Created " + local_file)
+
+
+class MostFrequentWordsJapanese(Language):
