@@ -160,5 +160,8 @@ class Japanese(Language):
         my_package.write_to_file(local_file, timestamp=time.time())
         logging.info("Created " + local_file)
 
+    def Filler(self):
+        pass
+
 
 class MostFrequentWordsJapanese(Language):
