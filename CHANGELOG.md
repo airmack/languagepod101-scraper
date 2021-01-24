@@ -43,3 +43,15 @@ Version 0.5.4
 - changed zfill to 3 instead of 2
 - added try-block for 'data-collection-entries' from quique
 
+Version 0.5.5
+===========
+- fixed recursive directory creation
+
+Version 0.5.6
+===========
+- fixed error that prevented a level download
+
+Version 0.5.7
+===========
+- hand out warnings, if on a trial account and trying to download more than 10 pdfs
+- outputs donwloaded files to the console
