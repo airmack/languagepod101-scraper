@@ -26,8 +26,8 @@ import anki_export
 import logging
 
 MAJOR_VERSION = 0
-MINOR_VERSION = 5
-PATCH_LEVEL = 7
+MINOR_VERSION = 6
+PATCH_LEVEL = 0
 
 VERSION_STRING = str(MAJOR_VERSION) + "." + \
     str(MINOR_VERSION) + "." + str(PATCH_LEVEL)
@@ -118,8 +118,8 @@ class LanguagePod101Downloader:
         try:
             response.raise_for_status()
         except Exception as e:
-            logging.error(e)
-            logging.error(
+            logging.critical(e)
+            logging.critical(
                 'Could not reach site. Please check URL and internet connection.')
             exit(1)
 
@@ -152,7 +152,8 @@ class LanguagePod101Downloader:
                 logging.info('Sucessfully logged in with new session.')
                 return
         if not self.check_if_authenticated(response):
-            logging.error('Could not log in. Please check your credentials.')
+            logging.critical(
+                'Could not log in. Please check your credentials.')
             exit(1)
 
     def download_audios(self, lesson_number, lesson_soup):
@@ -205,7 +206,7 @@ class LanguagePod101Downloader:
         downloadList = []
         if root_url.lower().find("japanese") != -1:
             voc_scraper = anki_export.Japanese()
-            downloadList = voc_scraper.Scraper(root_url, lesson_soup)
+            downloadList = voc_scraper.Scraper(lesson_soup)
         else:
             logging.warning("Unknown language")
 
@@ -278,16 +279,16 @@ class LanguagePod101Downloader:
         try:
             res.raise_for_status()
         except Exception as e:
-            logging.error(e)
-            logging.error(
+            logging.critical(e)
+            logging.critical(
                 'Could not download web page. Please make sure the URL is accurate.')
             exit(1)
 
         try:
             soup = BeautifulSoup(res.text, 'lxml')
         except Exception as e:
-            logging.error(e)
-            logging.error(
+            logging.critical(e)
+            logging.critical(
                 'Failed to parse the webpage, "lxml" package might be missing.')
             exit(1)
 
@@ -339,7 +340,7 @@ class LanguagePod101Downloader:
         if self.check_for_lessons_library(level_url):
             e = '''You should provide the URL for a language level, not a lesson.
             Eg: https://www.japanesepod101.com/lesson-library/absolute-beginner'''
-            logging.error(e)
+            logging.critical(e)
             exit(1)
         level_name = url_parts[-1]
         if not os.path.isdir(level_name):
@@ -574,8 +575,8 @@ def get_input_arguments():
         try:
             config.read(args.config)
         except Exception as e:
-            logging.error(e)
-            logging.error(f'Failed to load config file: ' + args.config)
+            logging.critical(e)
+            logging.critical(f'Failed to load config file: ' + args.config)
             exit(1)
         for key, content in config['User'].items():
             vargs[key] = content

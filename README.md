@@ -122,6 +122,9 @@ This may change in the future, so be aware.
 
 - As with all websites, the site's structure may change in the future and thus, as often happens with scraping scripts, deprecate it. It is not really a question of *if* the site's source code will change but rather **when** (so enjoy it while it's still working :grin:).
 
+
+- When using a trial account only 10 pdfs are allowed to be downloaded (this is enforced by the website). The script will warn when exceeding the limit and will not save any pdfs.
+
 ## :lock: License
 
 All of the content presented in the websites belongs to the original creators (Innovative Language) and I have nothing to do with it.

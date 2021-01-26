@@ -8,88 +8,17 @@ from genanki.model import Model
 import time
 import logging
 
+import sys
+from os.path import expanduser
+from os import path
+
 MAJOR_VERSION = 0
-MINOR_VERSION = 1
+MINOR_VERSION = 2
 PATCH_LEVEL = 0
 
 VERSION_STRING = str(MAJOR_VERSION) + "." + \
     str(MINOR_VERSION) + "." + str(PATCH_LEVEL)
 __version__ = VERSION_STRING
-
-japanese_fields = [
-    {
-        'name': 'Kana',
-        'font': 'Arial',
-    },
-    {
-        'name': 'English',
-        'font': 'Arial',
-    },
-    {
-        'name': 'Kanji',
-        'font': 'Arial',
-    },
-    {
-        'name': 'Japanese_Audio',
-        'font': 'Arial',
-    },
-    {
-        'name': 'English_Audio',
-        'font': 'Arial',
-    },
-
-    {
-        'name': 'Image',
-        'font': 'Arial',
-    },
-    {
-        'name': 'Example_Kanji',
-        'font': 'Arial',
-    },
-    {
-        'name': 'Example_Kana',
-        'font': 'Arial',
-    },
-    {
-        'name': 'Example_English',
-        'font': 'Arial',
-    },
-    {
-        'name': 'Example_Japanese_Audio',
-        'font': 'Arial',
-    },
-    {
-        'name': 'Example_English_Audio',
-        'font': 'Arial',
-    },
-]
-
-
-BASIC_AND_REVERSED_CARD_JP_MODEL = Model(
-    # kana, english, kanji, japanese_audio, english_audio,image, example_Kanji, example_Kana, example_japanese_audio, example_englisch_audio
-    12938896,
-    'Basic (and reversed card) (genanki)',
-    fields=japanese_fields,
-    templates=[
-        {
-            'name': 'Card 1',
-            'qfmt': '{{Image}}\n\n{{Kanji}}',
-            'afmt': """
-            {{FrontSide}}\n\n<hr id=answer>\n\n{{Kana}}{{Japanese_Audio}}<br>{{English}}\n\n
-            {{Example_Kanji}}{{Example_Kana}}{{Example_Japanese_Audio}} {{Example_English}}{{Example_English_Audio}}
-            """
-        },
-        {
-            'name': 'Card 2',
-            'qfmt': '{{Image}}\n\b{{English}}{{English_Audio}}',
-            'afmt': """
-            {{FrontSide}}\n\n<hr id=answer>\n\n{{Kanji}}<br>{{Kana}}{{Japanese_Audio}}\n\n
-            {{Example_Kanji}}{{Example_Kana}}{{Example_Japanese_Audio}} {{Example_English}}{{Example_English_Audio}}
-            """
-        },
-    ],
-    css='.card {\n font-family: arial;\n font-size: 20px;\n text-align: center;\n color: black;\n background-color: white;\n}\n',
-)
 
 
 def createKeyIfNeeded(parent, cards):
@@ -106,7 +35,7 @@ class Language:
     def __init__(self):
         self.language = ""
 
-    def Scraper(self, root_url, lesson_soup):
+    def Scraper(self, lesson_soup):
         return []
 
     def CreateDeck(self, title):
@@ -121,8 +50,7 @@ class Japanese(Language):
         self.audio_files = []
         self.card_fields = []
         self.finalizedCards = dict()
-        for i in japanese_fields:
-            self.card_fields.append(i["name"])
+        self.exampleCounter = 0
 
     def GetKanji(self, lesson_soup):
         for i in lesson_soup.find_all("span",  {"lang": "ja", "class": None}):
@@ -130,7 +58,8 @@ class Japanese(Language):
             self.cards = createKeyIfNeeded(parent, self.cards)
             self.cards[parent]["Kanji"] = i.get_text().strip()
 
-    def GetEnglih(self, lesson_soup):
+    def GetEnglish(self, lesson_soup):
+        """Get the enlish translation of the vocabulary"""
         for i in lesson_soup.find_all("span",  {"class": "lsn3-lesson-vocabulary__definition", "dir": "ltr"}):
             # we ignore sample sentences
             if i.find_parent("span", {"class": "lsn3-lesson-vocabulary__sample js-lsn3-vocabulary-examples"}):
@@ -140,11 +69,62 @@ class Japanese(Language):
             self.cards[parent]["English"] = i.get_text().strip()
 
     def GetKana(self, lesson_soup):
+        """Get the kana version of the vocabulary"""
         for i in lesson_soup.find_all("span",  {"lang": "ja", "class": "lsn3-lesson-vocabulary__pronunciation"}):
             parent = hash(i.find_parent("tr"))
             self.cards = createKeyIfNeeded(parent, self.cards)
-            self.cards[parent]["Kana"] = i.get_text().strip()[
-                1:-1].strip()
+            self.cards[parent]["Kana"] = i.get_text().strip()[1:-1].strip()
+
+    def GetExampleKanji(self, lesson_soup):
+        """Extract all examples including the japanese audio. Don't care about the english audio"""
+        exampleCounter = 0
+        needsToBeDownloaded = []
+        for i in lesson_soup.find_all("span",  {"lang": "ja", "class": "lsn3-lesson-vocabulary__term"}):
+            parent = hash(i.find_parent("tr").find_parent("tr"))
+            self.cards = createKeyIfNeeded(parent, self.cards)
+            j = 0
+            while "Example_Kanji_" + str(j) in self.cards[parent].keys():
+                j += 1
+            self.cards[parent]["Example_Kanji_" +
+                               str(j)] = i.get_text().strip()
+            x = i.parent.parent.find(
+                "button", {"class": "js-lsn3-play-vocabulary", "data-type": "audio/mp3", "data-speed": None})
+            self.exampleCounter = max(self.exampleCounter, j+1)
+            if not x:
+                continue
+
+            url_filename = x["data-src"].strip()
+            if url_filename.find("http://") == -1:
+                url_filename = "https://www.japanesepod101.com/" + url_filename
+
+            needsToBeDownloaded.append(url_filename)
+            name = url_filename.split('/')[-1]
+            self.audio_files.append(name)
+            self.cards = createKeyIfNeeded(parent, self.cards)
+            self.cards[parent]["Example_Japanese_Audio_" +
+                               str(j)] = "[sound:" + name + "]"
+            self.cards[parent]["audio_files"] = name
+
+        return needsToBeDownloaded
+
+    def GetExampleEnglish(self, lesson_soup):
+        """Extract english translation of the exsample"""
+        for i in lesson_soup.find_all("span",  {"dir": "ltr", "class": "lsn3-lesson-vocabulary__definition"}):
+            if not i.find_parent("span", {"class": "lsn3-lesson-vocabulary__sample"}):
+                continue
+            parent = hash(i.find_parent("tr").find_parent("tr"))
+            self.cards = createKeyIfNeeded(parent, self.cards)
+            j = 0
+            while "Example_English_" + str(j) in self.cards[parent].keys():
+                j += 1
+            self.cards[parent]["Example_English_" +
+                               str(j)] = i.get_text().strip()
+
+    def GetExamples(self, lesson_soup):
+        needsToBeDownloaded = []
+        needsToBeDownloaded += self.GetExampleKanji(lesson_soup)
+        self.GetExampleEnglish(lesson_soup)
+        return needsToBeDownloaded
 
     def GetAudio(self, lesson_soup):
         needsToBeDownloaded = []
@@ -162,19 +142,78 @@ class Japanese(Language):
             self.cards[parent]["audio_files"] = name
         return needsToBeDownloaded
 
-    def Scraper(self, root_url, lesson_soup):
+    def Scraper(self, lesson_soup):
         """Parse through the vocabulary section and get kanji, kana, english definition and audio."""
+        needsToBeDownloaded = []
         self.GetKanji(lesson_soup)
         self.GetKana(lesson_soup)
-        self.GetEnglih(lesson_soup)
-        needsToBeDownloaded = self.GetAudio(lesson_soup)
-
+        self.GetEnglish(lesson_soup)
+        needsToBeDownloaded += self.GetExamples(lesson_soup)
+        needsToBeDownloaded += self.GetAudio(lesson_soup)
+        self.CreateSaneFIeldNames()
         self.SanityCheck()
-        # self.FinalizeCards()
 
         return needsToBeDownloaded
 
+    def CreateSaneFIeldNames(self):
+        """Generate Sane values for all anki fields (amount of fields must match the amount of examples)"""
+        self.japanese_fields = [
+            {
+                'name': 'Kana',
+                'font': 'Arial',
+            },
+            {
+                'name': 'English',
+                'font': 'Arial',
+            },
+            {
+                'name': 'Kanji',
+                'font': 'Arial',
+            },
+            {
+                'name': 'Japanese_Audio',
+                'font': 'Arial',
+            },
+            {
+                'name': 'English_Audio',
+                'font': 'Arial',
+            },
+
+            {
+                'name': 'Image',
+                'font': 'Arial',
+            }
+        ]
+
+        for i in range(self.exampleCounter):
+            self.japanese_fields += [
+
+                {
+                    'name': 'Example_Kanji_' + str(i),
+                    'font': 'Arial',
+                },
+                {
+                    'name': 'Example_Kana_' + str(i),
+                    'font': 'Arial',
+                },
+                {
+                    'name': 'Example_English_' + str(i),
+                    'font': 'Arial',
+                },
+                {
+                    'name': 'Example_Japanese_Audio_' + str(i),
+                    'font': 'Arial',
+                },
+                {
+                    'name': 'Example_English_Audio_' + str(i),
+                    'font': 'Arial',
+                }
+            ]
+        for i in self.japanese_fields:
+            self.card_fields.append(i["name"])
+
     def SanityCheck(self):
+        """Fill in all the missing gaps in our cards"""
         for i in self.cards:
             for j in self.card_fields:
                 if self.cards[i].get(j) is None:
@@ -182,27 +221,108 @@ class Japanese(Language):
                     logging.debug(j + " does not exist")
 
     def FinalizeCard(self, entry):
+        """Helper function to put all the entries for the card in the correct order"""
         finalizedCards = []
         for j in self.card_fields:
             finalizedCards.append(entry.get(j))
         return finalizedCards
 
+    def CreateDynamicModel(self):
+        """Creates a dynamic model depending on the maximum amount of samples that we have"""
+
+        afmt_card1 = """{{FrontSide}}\n\n<hr id=answer>\n\n{{Kana}}{{Japanese_Audio}}<br>{{English}}\n\n"""
+        afmt_card2 = """{{FrontSide}}\n\n<hr id=answer>\n\n{{Kanji}} <br> {{Kana}}{{Japanese_Audio}}\n\n"""
+        examples = ""
+        for i in range(self.exampleCounter):
+            examples += "<br> {{Example_Kanji_" + str(i) + "}}{{Example_Kana_" + str(i) + "}}{{Example_Japanese_Audio_" + str(
+                i) + "}} {{Example_English_" + str(i) + "}}{{Example_English_Audio_" + str(i) + "}}\n\n"
+
+        templates = [
+            {
+                'name': 'Card 1',
+                'qfmt': '{{Image}}\n\n{{Kanji}}',
+                'afmt': afmt_card1 + examples
+            },
+            {
+                'name': 'Card 2',
+                'qfmt': '{{Image}}\n\n{{English}}{{English_Audio}}',
+                'afmt': afmt_card2 + examples
+            },
+        ]
+        card_model = Model(
+            12938896 + self.exampleCounter,
+            'Basic (and reversed card) (genanki)_' + str(self.exampleCounter),
+            fields=self.japanese_fields,
+            templates=templates,
+            css='.card {\n font-family: arial;\n font-size: 20px;\n text-align: center;\n color: black;\n background-color: white;\n}\n',
+        )
+        return card_model
+
     def CreateDeck(self, title):
         """Create a deck from all vocabulary entries"""
         deck = genanki.Deck(abs(hash(title)), title)
+        model = self.CreateDynamicModel()
+
         for i in self.cards:
-            final_card = self.FinalizeCard(self.cards[i])
-            deck.add_note(genanki.Note(
-                BASIC_AND_REVERSED_CARD_JP_MODEL, final_card))
+            try:
+                final_card = self.FinalizeCard(self.cards[i])
+                deck.add_note(genanki.Note(model, final_card))
+            except Exception as e:
+                logging.error(e)
+                logging.error(f"Can't create {final_card}")
+
         my_package = genanki.Package(deck)
         my_package.media_files = self.audio_files
         local_file = "".join(title.split()) + ".apkg"
         my_package.write_to_file(local_file, timestamp=time.time())
         logging.info("Created " + local_file)
 
-    def Filler(self):
-        pass
-
 
 class MostFrequentWordsJapanese(Language):
     pass
+
+
+def setupLogging():
+    """ Provide setup logign in case we are running standalone"""
+    logingpath = expanduser("~") + "/.local/share/languagepod101/"
+    if not path.exists(logingpath):
+        os.makedirs(logingpath)
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+                        datefmt='%m-%d %H:%M',
+                        filename=logingpath + "lp101_anki.log",
+                        filemode='w')
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
+    console.setFormatter(formatter)
+    logging.getLogger('').addHandler(console)
+
+
+def main(argv):
+    """ Provide standalone main functionality"""
+    data = ""
+    lessons_soup = ""
+    with open(argv[1]) as f:
+        data = f.read()
+    try:
+        lessons_soup = BeautifulSoup(data, 'lxml')
+    except Exception as e:
+        logging.critical(e)
+        logging.critical(
+            'Failed to parse the webpage, "lxml" package might be missing.')
+        exit(1)
+    voc_scraper = Japanese()
+    downloadList = voc_scraper.Scraper(lessons_soup)
+    save_name = "blobb.apkg"
+    if argv[1].find(".") != -1:
+        save_name = argv[1].split(".")[-2] + ".apkg"
+
+    voc_scraper.CreateDeck(save_name)
+
+
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        exit(1)
+    setupLogging()
+    main(sys.argv)

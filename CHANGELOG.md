@@ -1,16 +1,44 @@
-Version 0.1.0
+Version 0.6.0
 ===========
-- added support for config file
-- added support getpass to not show sensitive login data
+- it is now possible to extract example sentences and their audio for anki cards
+- changed critical error behavior
 
-Version 0.2.0
+Version 0.5.7
 ===========
-- added store for cookies
-- added differentiation for downloading videos/audio/pdfs
+- hand out warnings, if on a trial account and trying to download more than 10 pdfs
+- outputs donwloaded files to the console
 
-Version 0.3.0
+Version 0.5.6
 ===========
-- extract vocabulary for japanese and create anki decks
+- fixed error that prevented a level download
+
+Version 0.5.5
+===========
+- fixed recursive directory creation
+
+Version 0.5.4
+===========
+- merge with master from nedlir
+- changed zfill to 3 instead of 2
+- added try-block for 'data-collection-entries' from quique
+
+Version 0.5.3
+===========
+- fix in function call for download level URL
+
+Version 0.5.2
+===========
+- fix in function call, when the download stack should be cleaned up after successfully downloading all elements
+
+Version 0.5.1
+===========
+- fixed crashes for anki export if a single field is missing
+- created commandline argument to force a new download "-f"
+
+Version 0.5.0
+===========
+- continue download from last successful downloaded lesson
+- supports behavior for downloading levels and former lessons only
 
 Version 0.4.0
 ===========
@@ -19,39 +47,16 @@ Version 0.4.0
 - randomize delay while scraping. To not cause too much stress on the server side
 - fixed issue with incorrectly handling config settings
 
-Version 0.5.0
+Version 0.3.0
 ===========
-- continue download from last successful downloaded lesson
-- supports behavior for downloading levels and former lessons only
+- extract vocabulary for japanese and create anki decks
 
-Version 0.5.1
+Version 0.2.0
 ===========
-- fixed crashes for anki export if a single field is missing
-- created commandline argument to force a new download "-f"
+- added store for cookies
+- added differentiation for downloading videos/audio/pdfs
 
-Version 0.5.2
+Version 0.1.0
 ===========
-- fix in function call, when the download stack should be cleaned up after successfully downloading all elements
-
-Version 0.5.3
-===========
-- fix in function call for download level URL
-
-Version 0.5.4
-===========
-- merge with master from nedlir
-- changed zfill to 3 instead of 2
-- added try-block for 'data-collection-entries' from quique
-
-Version 0.5.5
-===========
-- fixed recursive directory creation
-
-Version 0.5.6
-===========
-- fixed error that prevented a level download
-
-Version 0.5.7
-===========
-- hand out warnings, if on a trial account and trying to download more than 10 pdfs
-- outputs donwloaded files to the console
+- added support for config file
+- added support getpass to not show sensitive login data
