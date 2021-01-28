@@ -278,8 +278,91 @@ class Japanese(Language):
         logging.info("Created " + local_file)
 
 
-class MostFrequentWordsJapanese(Language):
-    pass
+class MostFrequentWordsJapanese(Japanese):
+    def GetStuff(self, item, elment, dic, cardfield):
+        kanji = item.find(
+            elment, dic)
+        if kanji == None:
+            logging.warning("No Kanji content found")
+            return
+
+        parent = hash(kanji.find_parent(
+            "div", {"class": "wlv-item js-wlv-item"}))
+        self.cards = createKeyIfNeeded(parent, self.cards)
+        self.cards[parent][cardfield] = kanji.get_text().strip()
+
+    def GetImage(self, item):
+        needsToBeDownloaded = []
+        image_node = item.find("img", {"class": "wlv-item__image"})
+        if image_node == None:
+            logging.warning("No picture found")
+            return needsToBeDownloaded
+
+        parent = hash(image_node.find_parent(
+            "div", {"class": "wlv-item js-wlv-item"}))
+        self.cards = createKeyIfNeeded(parent, self.cards)
+        url_filename = image_node["src"].strip()
+        name = url_filename.split('/')[-1]
+        self.audio_files.append(name)
+        self.cards[parent]["Image"] = "<img src='" + name + "'>"
+
+        needsToBeDownloaded.append(url_filename)
+        return needsToBeDownloaded
+
+    def GetAudio(self, item):
+        needsToBeDownloaded = []
+        audio_node = item.find("audio")
+        if audio_node == None:
+            logging.warning("No audio found")
+            return needsToBeDownloaded
+
+        parent = hash(audio_node.find_parent(
+            "div", {"class": "wlv-item js-wlv-item"}))
+        self.cards = createKeyIfNeeded(parent, self.cards)
+        url_filename = audio_node["src"].strip()
+        name = url_filename.split('/')[-1]
+        self.audio_files.append(name)
+        self.cards[parent]["Japanese_Audio"] = "[sound:" + name + "]"
+        self.cards[parent]["audio_files"] = name
+
+        needsToBeDownloaded.append(url_filename)
+        return needsToBeDownloaded
+
+    def Scraper(self, lesson_soup):
+        """Parse through the vocabulary section and get kanji, kana, english definition and audio."""
+        needsToBeDownloaded = []
+        counter = 0
+        for i in lesson_soup.find_all("div", {"class": "wlv-item js-wlv-item"}):
+            needsToBeDownloaded += self.GetImage(i)
+            needsToBeDownloaded += self.GetAudio(i)
+            self.GetStuff(
+                i, "span", {"class": "wlv-item__word-zoom js-wlv-word-zoom"}, "Kanji")
+            self.GetStuff(
+                i, "span", {"class": "wlv-item__word-field js-wlv-word-field js-wlv-word-field-kana kana"}, "Kana")
+
+            self.GetStuff(
+                i, "span", {"class": "wlv-item__english js-wlv-english"}, "English")
+
+            j = i.find("div", {"class", "wlv-item__samples"})
+            if j == None:
+                logging.warning("Can't find examples")
+                continue
+
+            self.GetStuff(
+                j, "span", {"class": "wlv-item__word-zoom js-wlv-word-zoom"}, "Example_Kanji_0")
+
+            self.GetStuff(
+                j, "span", {"class": "wlv-item__word-field js-wlv-word-field kana"}, "Example_Kana_0")
+
+            self.GetStuff(
+                j, "span", {"class": "wlv-item__english"}, "Example_English_0")
+
+        print(needsToBeDownloaded)
+        self.exampleCounter = 1  # only one sample for now
+        self.CreateSaneFIeldNames()
+        self.SanityCheck()
+
+        return needsToBeDownloaded
 
 
 def setupLogging():
@@ -312,11 +395,11 @@ def main(argv):
         logging.critical(
             'Failed to parse the webpage, "lxml" package might be missing.')
         exit(1)
-    voc_scraper = Japanese()
+    voc_scraper = MostFrequentWordsJapanese()
     downloadList = voc_scraper.Scraper(lessons_soup)
     save_name = "blobb.apkg"
     if argv[1].find(".") != -1:
-        save_name = argv[1].split(".")[-2] + ".apkg"
+        save_name = argv[1].split(".")[-2]
 
     voc_scraper.CreateDeck(save_name)
 
