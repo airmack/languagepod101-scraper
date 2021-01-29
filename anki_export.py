@@ -309,7 +309,7 @@ class MostFrequentWordsJapanese(Japanese):
         needsToBeDownloaded.append(url_filename)
         return needsToBeDownloaded
 
-    def GetAudio(self, item):
+    def GetAudioStuff(self, item, cardfield):
         needsToBeDownloaded = []
         audio_node = item.find("audio")
         if audio_node == None:
@@ -322,7 +322,7 @@ class MostFrequentWordsJapanese(Japanese):
         url_filename = audio_node["src"].strip()
         name = url_filename.split('/')[-1]
         self.audio_files.append(name)
-        self.cards[parent]["Japanese_Audio"] = "[sound:" + name + "]"
+        self.cards[parent][cardfield] = "[sound:" + name + "]"
         self.cards[parent]["audio_files"] = name
 
         needsToBeDownloaded.append(url_filename)
@@ -334,7 +334,7 @@ class MostFrequentWordsJapanese(Japanese):
         counter = 0
         for i in lesson_soup.find_all("div", {"class": "wlv-item js-wlv-item"}):
             needsToBeDownloaded += self.GetImage(i)
-            needsToBeDownloaded += self.GetAudio(i)
+            needsToBeDownloaded += self.GetAudioStuff(i, "Japanese_Audio")
             self.GetStuff(
                 i, "span", {"class": "wlv-item__word-zoom js-wlv-word-zoom"}, "Kanji")
             self.GetStuff(
@@ -357,7 +357,8 @@ class MostFrequentWordsJapanese(Japanese):
             self.GetStuff(
                 j, "span", {"class": "wlv-item__english"}, "Example_English_0")
 
-        print(needsToBeDownloaded)
+            needsToBeDownloaded += self.GetAudioStuff(j, "Japanese_Audio")
+
         self.exampleCounter = 1  # only one sample for now
         self.CreateSaneFIeldNames()
         self.SanityCheck()
